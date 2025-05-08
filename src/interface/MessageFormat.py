@@ -2,22 +2,37 @@ import json
 from enum import Enum
 from typing import Dict, List, Any, TypedDict
 
+from src.database.models import Conversation
+from src.interface import Messages
+
+
 class MessageFormat:
     """消息格式统一管理类"""
     
     class RequestType(Enum):
         """请求类型枚举"""
+        CONVERSATION_QUESTION = "conversation_question"
+        CONVERSATION_MESSAGE = "conversation_message"
         QUESTION = "user_question"
         EXECUTE_TOOLS = "execute_tools"
         HEARTBEAT = "heartbeat"
+        SETTINGS_ADD_SERVER = "settings_add_server"
+        REGISTER = "register"
     
     class ResponseType(Enum):
         """响应类型枚举"""
+        CONVERSATION_MESSAGE = "conversation_message"
         ANSWER = "server_answer"
         SELECT_TOOLS = "server_select_function"
         HEARTBEAT_ACK = "heartbeat_ack"
         ERROR = "error"
-    
+        CONVERSATION_TITLE = "conversation_title"
+        CONVERSATION_LIST = "conversation_list"
+        USER_SETTINGS = "user_settings"
+        REGISTER_SUCCESS = "register_success"
+        AUTH_SUCCESS = "auth_success"
+        LOGOUT_SUCCESS = "logout_success"
+
     class AuthMessage(TypedDict):
         """认证消息格式"""
         user_id: str
@@ -66,12 +81,32 @@ class MessageFormat:
         code: int
         message: str
     
+    class RegisterRequest(TypedDict):
+        """注册请求格式"""
+        type: str
+        username: str
+        password: str
+    
+    class RegisterResponse(TypedDict):
+        """注册响应格式"""
+        type: str
+        user_id: str
+        username: str
+    
     @staticmethod
     def _create_json_message(message_type: str, **kwargs) -> str:
         """创建JSON消息的通用方法"""
         result = {"type": message_type, **kwargs}
         return json.dumps(result, ensure_ascii=False)
     
+    @staticmethod
+    def create_auth_success_response(user_id: str, username: str) -> str:
+        """创建认证成功消息"""
+        return MessageFormat._create_json_message(
+            MessageFormat.ResponseType.AUTH_SUCCESS.value,
+            user_id=user_id,
+            username=username
+        )
     @staticmethod
     def create_auth_message(user_id: str) -> str:
         """创建认证消息"""
@@ -91,6 +126,15 @@ class MessageFormat:
             select_functions=select_functions
         )
     
+    @staticmethod
+    def create_conversation_title_response(conversation_id: str, title: str) -> str:
+        """创建对话标题请求"""
+        return MessageFormat._create_json_message(
+            MessageFormat.ResponseType.CONVERSATION_TITLE.value,
+            conversation_id=conversation_id,
+            title=title
+        )
+
     @staticmethod
     def create_answer_response(answer: str) -> str:
         """创建回答响应"""
@@ -137,6 +181,40 @@ class MessageFormat:
         )
     
     @staticmethod
+    def create_conversation_list_response(conversations: List[Conversation]) -> str:
+        """创建对话列表响应"""
+        # 将Conversation对象转换为字典
+        conversation_dicts = []
+        for conv in conversations:
+            conversation_dicts.append({
+                "conversation_id": conv.conversation_id,
+                "title": conv.title,
+            })
+            
+        return MessageFormat._create_json_message(
+            MessageFormat.ResponseType.CONVERSATION_LIST.value,
+            conversations=conversation_dicts
+        )
+    
+    @staticmethod
+    def create_user_settings_response(user_settings: dict) -> str:
+        """创建用户设置响应"""
+        return MessageFormat._create_json_message(
+            MessageFormat.ResponseType.USER_SETTINGS.value,
+            user_settings=user_settings
+        )
+
+    @staticmethod
+    def create_conversation_message_response(conversation_id: str, messages: Messages) -> str:
+        """创建对话消息响应"""
+        return MessageFormat._create_json_message(
+            MessageFormat.ResponseType.CONVERSATION_MESSAGE.value,
+            conversation_id=conversation_id,
+            messages=messages.get_messages()
+        )
+
+
+    @staticmethod
     def create_error_response(error_message: str, error_code: int) -> str:
         """创建错误响应"""
         return MessageFormat._create_json_message(
@@ -162,3 +240,20 @@ class MessageFormat:
             return data.get("type") == MessageFormat.ResponseType.HEARTBEAT_ACK.value
         except json.JSONDecodeError:
             return False
+
+    @staticmethod
+    def create_register_response(user_id: str, username: str) -> str:
+        """创建注册响应"""
+        return MessageFormat._create_json_message(
+            MessageFormat.ResponseType.REGISTER_SUCCESS.value,
+            user_id=user_id,
+            username=username
+        )
+
+    @staticmethod
+    def create_logout_success_response() -> str:
+        """创建退出成功响应"""
+        return MessageFormat._create_json_message(
+            MessageFormat.ResponseType.LOGOUT_SUCCESS.value,
+            message="退出成功"
+        )

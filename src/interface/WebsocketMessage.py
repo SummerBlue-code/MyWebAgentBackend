@@ -118,6 +118,14 @@ class WebsocketMessage:
                 logger.warning("用户的Json格式不包含'question'属性")
                 raise KeyError
 
+    def get_server(self):
+        if self.message is not None:
+            try:
+                return self.message["server"]
+            except KeyError:
+                logger.warning("用户的Json格式不包含'server'属性")
+                raise KeyError
+
     def get_mcp_servers(self):
         if self.message is not None:
             try:
@@ -132,4 +140,12 @@ class WebsocketMessage:
                 return self.message["select_functions"]
             except KeyError:
                 logger.warning("用户的Json格式不包含'select_functions'属性")
+                raise KeyError
+            
+    def get_conversation_id(self):
+        if self.message is not None:
+            try:
+                return self.message["conversation_id"]
+            except KeyError:
+                logger.warning("用户的Json格式不包含'conversation_id'属性")
                 raise KeyError

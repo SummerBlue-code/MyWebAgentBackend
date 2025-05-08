@@ -22,6 +22,9 @@ class Messages:
     def add_assistant_tool_call_message(self, tool_calls:list):
         self.messages.append(self._transform_assistant_tool_call_message(tool_calls=tool_calls))
 
+    def delete_system_message(self):
+        self.messages = [message for message in self.messages if message['role'] != 'system']   
+
     def _transform_tool_message(self, tool_call_id, function_result):
         return {
             "tool_call_id": tool_call_id,

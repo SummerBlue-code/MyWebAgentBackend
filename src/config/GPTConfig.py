@@ -10,4 +10,10 @@ class GPTConfig:
         self.heartbeat_timeout = int(os.getenv("HEARTBEAT_TIMEOUT", 10))
         self.heartbeat_interval = int(os.getenv("HEARTBEAT_INTERVAL", 5))
         self.server_host = os.getenv("SERVER_HOST", "localhost")
-        self.server_port = int(os.getenv("SERVER_PORT", 8765)) 
+        self.server_port = int(os.getenv("SERVER_PORT", 8765))
+        self.db_host = "127.0.0.1"
+        self.db_port = 3306
+        self.db_user = "root"
+        self.db_password = "123456"
+        self.db_name = "ai agent"
+        
