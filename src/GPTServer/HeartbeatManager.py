@@ -28,6 +28,11 @@ class HeartbeatManager:
         self.heartbeat_received = False
         self._heartbeat_task: Optional[asyncio.Task] = None
 
+    async def handle_heartbeat_failure(self) -> None:
+        """处理心跳失败"""
+        logger.warning(f"用户 {self.user_id} 心跳失败，连接将被关闭")
+        await self.websocket.close(code=1000, reason="心跳超时")
+
     async def send_heartbeat(self) -> None:
         """发送心跳消息"""
         try:
@@ -94,6 +99,7 @@ class HeartbeatManager:
                         ErrorCode.HEARTBEAT_MAX_RETRIES.value
                     ))
                     self.is_running = False
+                    await self.handle_heartbeat_failure()
                     break
             except websockets.exceptions.ConnectionClosed:
                 logger.warning(f"用户 {self.user_id} 连接已关闭")
@@ -117,4 +123,4 @@ class HeartbeatManager:
         self.is_running = False
         if self._heartbeat_task:
             self._heartbeat_task.cancel()
-            logger.info(f"停止用户 {self.user_id} 的心跳检测")
+            logger.info(f"停止用户 {self.user_id} 的心跳检测") 
