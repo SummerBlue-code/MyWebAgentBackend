@@ -144,6 +144,7 @@ async def register(request: RegisterRequest) -> Dict[str, Any]:
 def start_http_server():
     """启动HTTP服务器"""
     import uvicorn
+    logger.info("HTTP服务器启动在 localhost:8080")
     uvicorn.run(app, host="localhost", port=8080)
 
 if __name__ == "__main__":

@@ -1,10 +1,15 @@
 import datetime
 import json
+import logging
 
 from fastapi import FastAPI, Request, Response
 from jsonrpcserver import Result, Success, dispatch, method
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+
+# 配置日志
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 origins = ['*']
@@ -52,7 +57,12 @@ def tools():
     }
     return functions_info
 
-
+def run_server():
+    logger.info("正在启动 ExecutePythonCode 服务器...")
+    try:
+        uvicorn.run(app, host="localhost", port=8001)
+    except Exception as e:
+        logger.error("服务器启动失败, 失败原因如下: %s", e)     
 
 if __name__ == "__main__":
-    uvicorn.run(app, port=8001)
+    run_server()

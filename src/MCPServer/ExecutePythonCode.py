@@ -156,9 +156,12 @@ def tools() -> dict:
     }
     return functions_info
 
-if __name__ == "__main__":
+def run_server():
     logger.info("正在启动 ExecutePythonCode 服务器...")
     try:
         uvicorn.run(app, host="localhost", port=8002)
     except Exception as e:
         logger.error("服务器启动失败, 失败原因如下: %s", e) 
+
+if __name__ == "__main__":
+    run_server()

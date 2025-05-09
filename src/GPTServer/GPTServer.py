@@ -156,19 +156,6 @@ async def start_server(handler):
     ws_server = await serve(handler, config.server_host, config.server_port)
     logger.info(f"WebSocket服务器启动在 {config.server_host}:{config.server_port}")
     
-    # 启动 HTTP 服务器
-    from src.GPTServer.HTTPServer import app
-    import uvicorn
-    import threading
-    
-    def run_http_server():
-        uvicorn.run(app, host="localhost", port=8080)
-    
-    # 在新线程中启动 HTTP 服务器
-    http_thread = threading.Thread(target=run_http_server)
-    http_thread.daemon = True  # 设置为守护线程，这样主程序退出时会自动结束
-    http_thread.start()
-    
     try:
         # 保持服务运行
         await asyncio.Future()
