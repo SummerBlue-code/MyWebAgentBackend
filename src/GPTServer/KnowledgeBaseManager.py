@@ -269,9 +269,12 @@ class KnowledgeBaseManager:
                 n_results=3
             )
             
+            texts = results["documents"][0]
+
             logger.info(f"在知识库 {knowledge_base_id} 中搜索问题: {question}")
-            
-            return results
+            logger.info(f"搜索结果: {texts}")
+
+            return texts
             
         except Exception as e:
             logger.error(f"搜索知识库失败: {str(e)}", exc_info=True)

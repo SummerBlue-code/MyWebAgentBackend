@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 class ConversationManager:
     """对话管理器，处理对话相关的操作"""
     
-    def __init__(self, db_ops, model, websocket_manager, system_prompts):
+    def __init__(self, db_ops, model, websocket_manager, gpt_server):
         """初始化对话管理器
         
         Args:
@@ -34,7 +34,7 @@ class ConversationManager:
         self.db_ops = db_ops
         self.model = model
         self.websocket_manager = websocket_manager
-        self.system_prompts = system_prompts
+        self.gpt_server = gpt_server
         
     async def answer_question_with_tools(
         self,
@@ -78,6 +78,8 @@ class ConversationManager:
 
             # 获取完整的消息历史
             message = self.db_ops.get_message_list(conversation_id)
+
+
             logger.info(f"处理工具调用后的消息历史: {message.get_messages()}")
             
             # 继续对话
@@ -137,7 +139,7 @@ class ConversationManager:
             system_prompt = Message(
                 message_id=str(uuid.uuid4()),
                 role="system",
-                content=self.system_prompts,
+                content=self.gpt_server.system_prompts,
                 created_time=datetime.now(),
                 tool_call_id=None,
                 tool_calls=None
@@ -281,7 +283,8 @@ class ConversationManager:
         try:
             available_functions = {}
             tools = []
-            
+            if messages.get_messages()[0]["role"] == "system":
+                messages.get_messages()[0]["content"] = self.gpt_server.system_prompts
             if mcp_servers:
                 for mcp_server in mcp_servers.get_servers():
                     tools.extend(mcp_server["server_functions"])

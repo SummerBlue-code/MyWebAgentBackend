@@ -29,13 +29,14 @@ class MessageHandler:
         """
         self.conversation_manager = gpt_server.conversation_manager
         self.db_ops = gpt_server.db_ops
+        self.gpt_server = gpt_server
         
     async def handle_message(
         self,
         websocket: ServerConnection,
         message: str,
         user_id: str,
-        heartbeat_manager: HeartbeatManager
+        heartbeat_manager: HeartbeatManager,
     ) -> None:
         """处理单条WebSocket消息
         
@@ -51,6 +52,69 @@ class MessageHandler:
         websocket_message = WebsocketMessage(message)
         message_type = websocket_message.get_type()
         logger.info('message_type: %s', message_type)
+
+        try:
+            question = websocket_message.get_question()
+            knowledge_base_id = websocket_message.get_knowledge_base_id()
+        except Exception as e:
+            logger.error(f"获取问题或知识库ID失败: {str(e)}", exc_info=True)
+            return
+
+
+        if question and knowledge_base_id:
+            # 如果存在知识库ID，搜索相关知识
+            knowledge_base_id = websocket_message.get_knowledge_base_id()
+            if knowledge_base_id:
+                try:
+                    # 获取用户最后一条消息
+                    last_user_message = question
+                    
+                    if last_user_message:
+                        # 搜索知识库
+                        from src.GPTServer.KnowledgeBaseManager import KnowledgeBaseManager
+                        kb_manager = KnowledgeBaseManager(self.db_ops, self.gpt_server.conversation_manager.model)
+                        search_results = kb_manager.search_texts_in_knowledge_base(
+                            knowledge_base_id, 
+                            last_user_message
+                        )
+                        
+                        # 构建知识库提示词
+                        if search_results:
+                            knowledge_prompt = ""
+                            for index, doc in enumerate(search_results):
+                                knowledge_prompt += f"{index+1}. {doc}\n\n"
+                            
+                            self.gpt_server.system_prompts = """# 角色定义
+你叫"智链",是一个专业的AI助手,你的回答必须严格遵守以下规则:
+
+# 回答规则
+1.用户的问题必须使用中文回答
+2.精通各种工具函数的调用,具备跨平台数据接口调用权限,能够精准解析用户需求并调用最佳工具函数获取结构化数据
+3.精通多种编程语言、框架、设计模式和最佳实践,通晓17种编程范式,擅长模块化设计(含DDD/微服务架构),代码生成通过ISO/IEC 5055认证
+4.用户的问题必须严格基于以下上下文内容回答：
+4-1.当上下文内容无法回答问题, 并且此时调用工具函数如果有可能解决问题, 那么你会去调用工具函数
+4-2.当上下文内容无法回答问题，并且调用的工具函数返回的信息也无法解决问题，那么你会回答"对不起，这个问题我无法回答，因为我目前没有掌握足够的信息。请您按照以下操作来增加解决的可能性:\n1.提供更详细的问题\n2.向知识库添加更多的相关文件\n3.添加更多有助于我解决问题的工具函数"
+
+# 上下文
+{{context}}
+"""
+
+                            # 将知识库内容添加到system message
+                            self.gpt_server.system_prompts = self.gpt_server.system_prompts.replace("{{context}}", knowledge_prompt)
+                            logger.info("prompts: %s", self.gpt_server.system_prompts)
+                except Exception as e:
+                    logger.error(f"搜索知识库失败: {str(e)}", exc_info=True)
+                    # 如果搜索失败，继续使用原有方式回答
+        else:
+            self.gpt_server.system_prompts = """# 角色定义
+你叫"智链",是一个专业的AI助手,你的回答必须严格遵守以下规则:
+
+# 回答规则
+1.用户的问题必须使用中文回答
+2.精通各种工具函数的调用,具备跨平台数据接口调用权限,能够精准解析用户需求并调用最佳工具函数获取结构化数据
+3.精通多种编程语言、框架、设计模式和最佳实践,通晓17种编程范式,擅长模块化设计(含DDD/微服务架构),代码生成通过ISO/IEC 5055认证
+"""
+            logger.info("prompts: %s", self.gpt_server.system_prompts)
         
         message_handlers = {
             "logout": lambda: websocket.send(MessageFormat.create_logout_success_response()),

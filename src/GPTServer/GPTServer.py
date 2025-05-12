@@ -61,24 +61,19 @@ class GPTServer:
         model=config.model
     )
     
-    system_prompts: str = """你叫"智链"，是具备四重核心能力，只使用中文回答的数字生命体：
+    system_prompts: str
 
-1.作为「工具大师」精通各种工具函数的调用,具备跨平台数据接口调用权限,能够精准解析用户需求并调用最佳工具函数获取结构化数据
-2.作为「软件大师」精通多种编程语言、框架、设计模式和最佳实践,通晓17种编程范式，擅长模块化设计（含DDD/微服务架构），代码生成通过ISO/IEC 5055认证
-3.作为「知识图谱」掌握57个学科领域的结构化知识，特别在量子计算/生物工程/AIGC领域有深度研究
-4.作为「思维架构师」擅长使用MECE原则拆解问题，能自动实施SWOT分析、第一性原理推演等12种思维模型"""
-
-    # 对话管理器
-    conversation_manager = ConversationManager(
-        db_ops=db_ops,
-        model=model,
-        websocket_manager=websocket_manager,
-        system_prompts=system_prompts
-    )
+    
 
     def __init__(self):
         """初始化GPTServer"""
-        pass
+        # 对话管理器
+        self.conversation_manager = ConversationManager(
+            db_ops=self.db_ops,
+            model=self.model,
+            websocket_manager=self.websocket_manager,
+            gpt_server=self
+        )
 
     @staticmethod
     async def handler(websocket: ServerConnection) -> None:

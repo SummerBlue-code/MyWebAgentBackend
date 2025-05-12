@@ -116,7 +116,15 @@ class WebsocketMessage:
                 return self.message["question"]
             except KeyError:
                 logger.warning("用户的Json格式不包含'question'属性")
-                raise KeyError
+                return None
+            
+    def get_knowledge_base_id(self):
+        if self.message is not None:
+            try:
+                return self.message["knowledge_base_id"]
+            except KeyError:
+                logger.warning("用户的Json格式不包含'knowledge_base_id'属性")
+                return None
 
     def get_server(self):
         if self.message is not None:
