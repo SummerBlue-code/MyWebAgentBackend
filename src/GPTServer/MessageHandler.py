@@ -6,6 +6,7 @@ import uuid
 
 from websockets import ServerConnection
 
+from src.GPTServer.AuthenticationHandler import AuthenticationHandler
 from src.interface import Messages
 from src.interface.EnumModel import EnumModel
 from src.interface.MCPServers import MCPServers
@@ -101,7 +102,6 @@ class MessageHandler:
 
                             # 将知识库内容添加到system message
                             self.gpt_server.system_prompts = self.gpt_server.system_prompts.replace("{{context}}", knowledge_prompt)
-                            logger.info("prompts: %s", self.gpt_server.system_prompts)
                 except Exception as e:
                     logger.error(f"搜索知识库失败: {str(e)}", exc_info=True)
                     # 如果搜索失败，继续使用原有方式回答
@@ -114,13 +114,14 @@ class MessageHandler:
 2.精通各种工具函数的调用,具备跨平台数据接口调用权限,能够精准解析用户需求并调用最佳工具函数获取结构化数据
 3.精通多种编程语言、框架、设计模式和最佳实践,通晓17种编程范式,擅长模块化设计(含DDD/微服务架构),代码生成通过ISO/IEC 5055认证
 """
-            logger.info("prompts: %s", self.gpt_server.system_prompts)
+
         
         message_handlers = {
             "logout": lambda: websocket.send(MessageFormat.create_logout_success_response()),
-            MessageFormat.RequestType.SETTINGS_ADD_SERVER.value: lambda: self.conversation_manager.gpt_server.settings_user_server(
+            MessageFormat.RequestType.SETTINGS_ADD_SERVER.value: lambda: AuthenticationHandler(self.db_ops).settings_user_server(
                 websocket_message.get_server(),
-                user_id
+                user_id,
+                websocket_manager=self.gpt_server.websocket_manager,
             ),
             MessageFormat.RequestType.CONVERSATION_QUESTION.value: lambda: self.conversation_manager.answer_conversation_question(
                 websocket_message.get_question(),

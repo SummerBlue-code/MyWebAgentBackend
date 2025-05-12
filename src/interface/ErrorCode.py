@@ -3,6 +3,7 @@ from enum import Enum
 class ErrorCode(Enum):
     """错误码枚举"""
     # 认证相关错误 (1000-1099)
+
     AUTH_MISSING_USER_ID = 1001
     AUTH_MISSING_PASSWORD = 1002  # 改为密码
     AUTH_INVALID_FORMAT = 1003
@@ -14,6 +15,7 @@ class ErrorCode(Enum):
     AUTH_WRONG_PASSWORD = 1009  # 密码错误
     AUTH_MISSING_TYPE = 1010  # 缺少认证类型
     AUTH_MISSING_USERNAME = 1011
+    SERVER_SETTINGS_UPDATE_ERROR = 1012
     
     # 消息处理错误 (1100-1199)
     MSG_INVALID_TYPE = 1101
