@@ -1,13 +1,20 @@
 import logging
-from typing import Dict, Any, Tuple
-from fastapi import FastAPI, HTTPException
+from typing import Dict, Any, Tuple, List
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from src.GPTServer.GPTServer import GPTServer
+from src.GPTServer.KnowledgeBaseManager import KnowledgeBaseManager
+from src.database.operations import DatabaseOperations
+from src.database.base import Database
+from src.interface.EnumModel import EnumModel
 from src.interface.ErrorCode import ErrorCode
 from src.database.models import User
+from src.GPTServer.GPTServer import GPTServer
 from datetime import datetime
 import uuid
+import os
+
+from src.models.GPTModel import GPTModel
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +49,46 @@ class ErrorResponse(BaseModel):
     type: str = Field(..., description="响应类型")
     code: int = Field(..., description="错误码")
     message: str = Field(..., description="错误信息")
+
+# 知识库相关请求模型
+class CreateKnowledgeBaseRequest(BaseModel):
+    user_id: str = Field(..., description="用户ID")
+    title: str = Field(..., description="知识库标题")
+
+class KnowledgeBaseResponse(BaseModel):
+    kb_id: str = Field(..., description="知识库ID")
+    title: str = Field(..., description="知识库标题")
+    created_time: datetime = Field(..., description="创建时间")
+
+class KnowledgeBaseListResponse(BaseModel):
+    knowledge_bases: List[KnowledgeBaseResponse] = Field(..., description="知识库列表")
+
+class KnowledgeBaseFileResponse(BaseModel):
+    file_id: str = Field(..., description="文件ID")
+    file_name: str = Field(..., description="文件名")
+    file_path: str = Field(..., description="文件路径")
+    summary: str = Field(..., description="文件摘要")
+    created_time: datetime = Field(..., description="创建时间")
+
+class KnowledgeBaseFileListResponse(BaseModel):
+    files: List[KnowledgeBaseFileResponse] = Field(..., description="文件列表")
+
+# 全局服务实例
+knowledge_base_service = KnowledgeBaseManager(
+    db_ops=DatabaseOperations(
+        Database(
+            "127.0.0.1",
+            3306,
+            "root",
+            "123456",
+            "ai agent"
+        )
+    ),
+    model=GPTModel("https://api.moleapi.com/v1",
+                   "sk-RpraSr9gpvNxiNX7Al68OpmAEKnPqPppiLGX3j3ypgAIjnyf",
+                   EnumModel.gpt_4o_mini
+                   )
+)
 
 async def handle_register(register_data: dict) -> Tuple[bool, dict]:
     """处理用户注册
@@ -138,6 +185,196 @@ async def register(request: RegisterRequest) -> Dict[str, Any]:
                 "type": "error",
                 "code": response["code"],
                 "message": response["error"]
+            }
+        )
+
+@app.post("/api/knowledge-base", 
+    response_model=KnowledgeBaseResponse,
+    responses={
+        400: {"model": ErrorResponse, "description": "请求参数错误"},
+        500: {"model": ErrorResponse, "description": "服务器内部错误"}
+    },
+    summary="创建知识库",
+    description="创建新的知识库"
+)
+async def create_knowledge_base(request: CreateKnowledgeBaseRequest) -> Dict[str, Any]:
+    """创建知识库"""
+    try:
+        kb_id, title = knowledge_base_service.create_knowledge_base(request.user_id,request.title)
+        return {
+            "kb_id": kb_id,
+            "title": title,
+            "created_time": datetime.now()
+        }
+    except Exception as e:
+        logger.error(f"创建知识库失败: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "type": "error",
+                "code": ErrorCode.SERVER_INTERNAL_ERROR.value,
+                "message": str(e)
+            }
+        )
+
+@app.get("/api/knowledge-base", 
+    response_model=KnowledgeBaseListResponse,
+    responses={
+        500: {"model": ErrorResponse, "description": "服务器内部错误"}
+    },
+    summary="获取知识库列表",
+    description="获取用户的所有知识库"
+)
+async def get_knowledge_bases(user_id: str) -> Dict[str, Any]:
+    """获取知识库列表"""
+    try:
+        knowledge_bases = knowledge_base_service.get_user_knowledge_bases(user_id)
+        return {
+            "knowledge_bases": [
+                {
+                    "kb_id": kb.kb_id,
+                    "title": kb.title,
+                    "created_time": kb.created_time
+                }
+                for kb in knowledge_bases
+            ]
+        }
+    except Exception as e:
+        logger.error(f"获取知识库列表失败: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "type": "error",
+                "code": ErrorCode.SERVER_INTERNAL_ERROR.value,
+                "message": str(e)
+            }
+        )
+
+@app.get("/api/knowledge-base/{kb_id}/files", 
+    response_model=KnowledgeBaseFileListResponse,
+    responses={
+        404: {"model": ErrorResponse, "description": "知识库不存在"},
+        500: {"model": ErrorResponse, "description": "服务器内部错误"}
+    },
+    summary="获取知识库文件列表",
+    description="获取指定知识库中的所有文件"
+)
+async def get_knowledge_base_files(kb_id: str) -> Dict[str, Any]:
+    """获取知识库文件列表"""
+    try:
+        files = knowledge_base_service.get_knowledge_base_files(kb_id)
+        return {
+            "files": [
+                {
+                    "file_id": file.file_id,
+                    "file_name": file.file_name,
+                    "file_path": file.file_path,
+                    "summary": file.summary,
+                    "created_time": file.created_time
+                }
+                for file in files
+            ]
+        }
+    except Exception as e:
+        logger.error(f"获取知识库文件列表失败: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "type": "error",
+                "code": ErrorCode.SERVER_INTERNAL_ERROR.value,
+                "message": str(e)
+            }
+        )
+
+@app.post("/api/knowledge-base/{kb_id}/files", 
+    response_model=KnowledgeBaseFileResponse,
+    responses={
+        404: {"model": ErrorResponse, "description": "知识库不存在"},
+        400: {"model": ErrorResponse, "description": "文件格式错误"},
+        500: {"model": ErrorResponse, "description": "服务器内部错误"}
+    },
+    summary="上传文件到知识库",
+    description="上传文件到指定的知识库"
+)
+async def upload_knowledge_file(
+    kb_id: str,
+    file: UploadFile = File(...),
+) -> Dict[str, Any]:
+    """上传文件到知识库"""
+    try:
+        # 检查文件类型
+        allowed_types = ['.txt', '.md', '.pdf', '.doc', '.docx']
+        file_ext = os.path.splitext(file.filename)[1].lower()
+        if file_ext not in allowed_types:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "type": "error",
+                    "code": ErrorCode.INVALID_PARAMETER.value,
+                    "message": f"不支持的文件类型: {file_ext}"
+                }
+            )
+
+        result = knowledge_base_service.update_file_to_knowledge_base(kb_id, file)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"上传文件到知识库失败: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "type": "error",
+                "code": ErrorCode.SERVER_INTERNAL_ERROR.value,
+                "message": str(e)
+            }
+        )
+
+@app.delete("/api/knowledge-base/{kb_id}", 
+    responses={
+        404: {"model": ErrorResponse, "description": "知识库不存在"},
+        500: {"model": ErrorResponse, "description": "服务器内部错误"}
+    },
+    summary="删除知识库",
+    description="删除指定的知识库及其所有文件"
+)
+async def delete_knowledge_base(kb_id: str) -> Dict[str, Any]:
+    """删除知识库"""
+    try:
+        knowledge_base_service.delete_knowledge_base(kb_id)
+        return {"message": "知识库删除成功"}
+    except Exception as e:
+        logger.error(f"删除知识库失败: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "type": "error",
+                "code": ErrorCode.SERVER_INTERNAL_ERROR.value,
+                "message": str(e)
+            }
+        )
+
+@app.delete("/api/knowledge-base/{kb_id}/files/{file_id}",
+    responses={
+        404: {"model": ErrorResponse, "description": "文件不存在"},
+        500: {"model": ErrorResponse, "description": "服务器内部错误"}
+    },
+    summary="删除知识库文件",
+    description="删除指定的知识库文件"
+)
+async def delete_knowledge_file(kb_id:str, file_id: str) -> Dict[str, Any]:
+    """删除知识库文件"""
+    try:
+        knowledge_base_service.delete_knowledge_base_file(kb_id,file_id)
+        return {"message": "文件删除成功"}
+    except Exception as e:
+        logger.error(f"删除知识库文件失败: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "type": "error",
+                "code": ErrorCode.SERVER_INTERNAL_ERROR.value,
+                "message": str(e)
             }
         )
 

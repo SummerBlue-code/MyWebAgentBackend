@@ -37,3 +37,5 @@ class ErrorCode(Enum):
     # 服务器内部错误 (1400-1499)
     SERVER_INTERNAL_ERROR = 1401
     SERVER_CONNECTION_ERROR = 1402 
+    
+    INVALID_PARAMETER = 1501

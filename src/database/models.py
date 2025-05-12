@@ -53,4 +53,20 @@ class MessageToolCall:
 class UserConversation:
     user_id: str
     conversation_id: str
-    create_time: datetime 
+    create_time: datetime
+
+@dataclass
+class KnowledgeBaseFile:
+    file_id: str
+    knowledge_base_id: str
+    file_name: str
+    file_path: str
+    summary: str
+    created_time: datetime
+
+@dataclass
+class UserKnowledgeBase:
+    kb_id: str
+    user_id: str
+    title: str
+    created_time: datetime

@@ -1,7 +1,7 @@
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from .base import Database
-from .models import User, Conversation, Message, ConversationMessage, ToolCall, MessageToolCall, UserConversation
+from .models import User, Conversation, Message, ConversationMessage, ToolCall, MessageToolCall, UserConversation, KnowledgeBaseFile, UserKnowledgeBase
 from ..interface.Messages import Messages
 import json
 import logging
@@ -311,4 +311,71 @@ class DatabaseOperations:
         ORDER BY c.update_time DESC
         """
         results = self.db.execute_query(query, (user_id,))
-        return [Conversation(**data) for data in results] 
+        return [Conversation(**data) for data in results]
+
+    # KnowledgeBaseFile 相关操作
+    def create_knowledge_base_file(self, file: KnowledgeBaseFile) -> bool:
+        query = """
+        INSERT INTO knowledge_base_file (file_id, knowledge_base_id, file_name, file_path, summary, created_time)
+        VALUES (%s, %s, %s, %s, %s, %s)
+        """
+        try:
+            self.db.execute_insert(query, (
+                file.file_id, file.knowledge_base_id, file.file_name,
+                file.file_path, file.summary, file.created_time
+            ))
+            return True
+        except Exception as e:
+            logger.error(f"创建知识库文件失败: {str(e)}")
+            return False
+
+    def get_knowledge_base_files(self, knowledge_base_id: str) -> List[KnowledgeBaseFile]:
+        query = "SELECT * FROM knowledge_base_file WHERE knowledge_base_id = %s ORDER BY created_time DESC"
+        results = self.db.execute_query(query, (knowledge_base_id,))
+        return [KnowledgeBaseFile(**data) for data in results]
+
+    def get_knowledge_base_file(self, file_id: str) -> Optional[KnowledgeBaseFile]:
+        query = "SELECT * FROM knowledge_base_file WHERE file_id = %s"
+        result = self.db.execute_query(query, (file_id,))
+        if result:
+            return KnowledgeBaseFile(**result[0])
+        return None
+
+    def delete_knowledge_base_file(self, file_id: str) -> bool:
+        query = "DELETE FROM knowledge_base_file WHERE file_id = %s"
+        return self.db.execute_delete(query, (file_id,)) > 0
+
+    # UserKnowledgeBase 相关操作
+    def create_user_knowledge_base(self, kb: UserKnowledgeBase) -> bool:
+        query = """
+        INSERT INTO user_knowledge_base (kb_id, user_id, title, created_time)
+        VALUES (%s, %s, %s, %s)
+        """
+        try:
+            self.db.execute_insert(query, (
+                kb.kb_id, kb.user_id, kb.title, kb.created_time
+            ))
+            return True
+        except Exception as e:
+            logger.error(f"创建用户知识库失败: {str(e)}")
+            return False
+
+    def get_user_knowledge_bases(self, user_id: str) -> List[UserKnowledgeBase]:
+        query = "SELECT * FROM user_knowledge_base WHERE user_id = %s ORDER BY created_time DESC"
+        results = self.db.execute_query(query, (user_id,))
+        return [UserKnowledgeBase(**data) for data in results]
+
+    def get_knowledge_base(self, kb_id: str) -> Optional[UserKnowledgeBase]:
+        query = "SELECT * FROM user_knowledge_base WHERE kb_id = %s"
+        result = self.db.execute_query(query, (kb_id,))
+        if result:
+            return UserKnowledgeBase(**result[0])
+        return None
+
+    def update_knowledge_base_title(self, kb_id: str, title: str) -> bool:
+        query = "UPDATE user_knowledge_base SET title = %s WHERE kb_id = %s"
+        return self.db.execute_update(query, (title, kb_id)) > 0
+
+    def delete_knowledge_base(self, kb_id: str) -> bool:
+        query = "DELETE FROM user_knowledge_base WHERE kb_id = %s"
+        return self.db.execute_delete(query, (kb_id,)) > 0
