@@ -117,6 +117,38 @@ class DatabaseOperations:
         query = "UPDATE conversations SET title = %s WHERE conversation_id = %s"
         return self.db.execute_update(query, (title, conversation_id)) > 0
 
+    def delete_conversation(self, conversation_id: str) -> bool:
+        """删除对话及其所有相关数据
+        
+        Args:
+            conversation_id (str): 对话ID
+            
+        Returns:
+            bool: 是否删除成功
+        """
+        try:
+            self.db.begin_transaction()
+            
+            # 1. 删除对话消息关联
+            query1 = "DELETE FROM conversation_messages WHERE conversation_id = %s"
+            self.db.execute_delete(query1, (conversation_id,))
+            
+            # 2. 删除用户对话关联
+            query2 = "DELETE FROM user_conversations WHERE conversation_id = %s"
+            self.db.execute_delete(query2, (conversation_id,))
+            
+            # 3. 删除对话本身
+            query3 = "DELETE FROM conversations WHERE conversation_id = %s"
+            self.db.execute_delete(query3, (conversation_id,))
+            
+            self.db.commit_transaction()
+            return True
+            
+        except Exception as e:
+            logger.error(f"删除对话失败: {str(e)}", exc_info=True)
+            self.db.rollback_transaction()
+            return False
+
     # Message 相关操作
     def create_message(self, message: Message, conversation_id: str, tool_calls: Optional[List[ToolCall]] = None) -> bool:
         """创建消息并自动关联对话和工具调用"""
@@ -304,8 +336,17 @@ class DatabaseOperations:
             return False
 
     def get_user_conversations(self, user_id: str) -> List[Conversation]:
+        """获取用户的所有对话
+        
+        Args:
+            user_id (str): 用户ID
+            
+        Returns:
+            List[Conversation]: 对话列表，按更新时间倒序排列
+        """
         query = """
-        SELECT c.* FROM conversations c
+        SELECT c.*
+        FROM conversations c
         JOIN user_conversations uc ON c.conversation_id = uc.conversation_id
         WHERE uc.user_id = %s AND c.status = 'active'
         ORDER BY c.update_time DESC

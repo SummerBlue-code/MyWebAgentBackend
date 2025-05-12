@@ -17,7 +17,8 @@ class MessageFormat:
         EXECUTE_TOOLS = "execute_tools"
         HEARTBEAT = "heartbeat"
         SETTINGS_ADD_SERVER = "settings_add_server"
-        REGISTER = "register"
+        DELETE_CONVERSATION = "delete_conversation"
+        GET_CONVERSATION_LIST = "get_conversation_list"
     
     class ResponseType(Enum):
         """响应类型枚举"""
@@ -32,6 +33,7 @@ class MessageFormat:
         REGISTER_SUCCESS = "register_success"
         AUTH_SUCCESS = "auth_success"
         LOGOUT_SUCCESS = "logout_success"
+        DELETE_CONVERSATION_SUCCESS = "delete_conversation_success"
 
     class AuthMessage(TypedDict):
         """认证消息格式"""
@@ -256,4 +258,13 @@ class MessageFormat:
         return MessageFormat._create_json_message(
             MessageFormat.ResponseType.LOGOUT_SUCCESS.value,
             message="退出成功"
+        )
+
+    @staticmethod
+    def create_delete_conversation_response(conversation_id: str) -> str:
+        """创建删除对话成功响应"""
+        return MessageFormat._create_json_message(
+            MessageFormat.ResponseType.DELETE_CONVERSATION_SUCCESS.value,
+            conversation_id=conversation_id,
+            message="对话删除成功"
         )

@@ -143,6 +143,13 @@ class MessageHandler:
                 websocket_message.get_conversation_id(),
                 websocket_message.get_select_functions(),
                 websocket_message.get_mcp_servers()
+            ),
+            MessageFormat.RequestType.DELETE_CONVERSATION.value: lambda: self.conversation_manager.delete_conversation(
+                websocket_message.get_conversation_id(),
+                user_id
+            ),
+            MessageFormat.RequestType.GET_CONVERSATION_LIST.value: lambda: self.conversation_manager.get_conversation_list(
+                user_id
             )
         }
         

@@ -336,4 +336,64 @@ class ConversationManager:
         except Exception as e:
             error_msg = f"服务器处理GPT回答时出错: {str(e)}"
             logger.error(error_msg, exc_info=True)
-            raise MessageProcessingError(error_msg, ErrorCode.MSG_GPT_RESPONSE_ERROR) 
+            raise MessageProcessingError(error_msg, ErrorCode.MSG_GPT_RESPONSE_ERROR)
+
+    async def delete_conversation(self, conversation_id: str, user_id: str) -> None:
+        """删除对话
+        
+        Args:
+            conversation_id (str): 对话ID
+            user_id (str): 用户ID
+            
+        Raises:
+            GPTServerError: 删除失败时抛出
+        """
+        try:
+            # 检查对话是否存在
+            conversation = self.db_ops.get_conversation(conversation_id)
+            if not conversation:
+                raise GPTServerError("对话不存在", ErrorCode.SERVER_INTERNAL_ERROR)
+            
+            # 删除对话及其所有消息
+            success = self.db_ops.delete_conversation(conversation_id)
+            if not success:
+                raise GPTServerError("删除对话失败", ErrorCode.SERVER_INTERNAL_ERROR)
+                
+            logger.info(f"成功删除对话 {conversation_id}")
+
+            await self.websocket_manager.send_to_user(
+                user_id,
+                MessageFormat.create_delete_conversation_response(conversation_id)
+            )
+            
+        except Exception as e:
+            logger.error(f"删除对话失败: {str(e)}", exc_info=True)
+            raise GPTServerError(f"删除对话失败: {str(e)}", ErrorCode.SERVER_INTERNAL_ERROR)
+
+    async def get_conversation_list(self, user_id: str) -> None:
+        """获取用户的对话列表
+        
+        Args:
+            user_id (str): 用户ID
+            
+        Raises:
+            GPTServerError: 获取失败时抛出
+        """
+        try:
+            # 获取用户的对话列表
+            conversations = self.db_ops.get_user_conversations(user_id)
+            if conversations is None:
+                raise GPTServerError("获取对话列表失败", ErrorCode.SERVER_INTERNAL_ERROR)
+                
+            logger.info(f"成功获取用户 {user_id} 的对话列表")
+            
+            # 发送对话列表给用户
+            await self.websocket_manager.send_to_user(
+                user_id,
+                MessageFormat.create_conversation_list_response(conversations)
+            )
+            
+        except Exception as e:
+            logger.error(f"获取对话列表失败: {str(e)}", exc_info=True)
+            raise GPTServerError(f"获取对话列表失败: {str(e)}", ErrorCode.SERVER_INTERNAL_ERROR) 
+        
