@@ -25,6 +25,14 @@ class Messages:
     def delete_system_message(self):
         self.messages = [message for message in self.messages if message['role'] != 'system']   
 
+    def filter_valid_conversation_messages(self):
+        """只保留用户消息和内容不为空的助手消息"""
+        self.messages = [
+            message for message in self.messages 
+            if (message['role'] == 'user') or 
+               (message['role'] == 'assistant' and message.get('content'))
+        ]
+
     def _transform_tool_message(self, tool_call_id, function_result):
         return {
             "tool_call_id": tool_call_id,

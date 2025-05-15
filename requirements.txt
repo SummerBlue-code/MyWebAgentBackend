@@ -1,3 +1,11 @@
-sqlalchemy>=1.4.0
-pymysql==1.1.0
-cryptography==41.0.7  # 用于PyMySQL的加密支持 
+openai==1.76.0
+PyMySQL==1.1.1
+httpx==0.28.1
+websockets==15.0.1
+fastapi==0.115.9
+pydantic==2.11.3
+chromadb==1.0.8
+requests==2.32.3
+uvicorn==0.34.2
+jsonrpcserver==5.0.9
+python-multipart==0.0.20

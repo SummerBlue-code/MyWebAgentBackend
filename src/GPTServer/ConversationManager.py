@@ -170,8 +170,9 @@ class ConversationManager:
         """回答对话消息"""
         try:
             message = self.db_ops.get_message_list(conversation_id)
-            # 删除消息列表中的系统消息
+            # 删除消息列表中的系统消息，并且只保留用户消息和内容不为空的助手消息
             message.delete_system_message()
+            message.filter_valid_conversation_messages()
 
             logger.info(f"message: {message.get_messages()}")
             await self.websocket_manager.send_to_user(
