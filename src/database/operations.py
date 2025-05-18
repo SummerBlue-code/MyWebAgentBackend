@@ -249,7 +249,10 @@ class DatabaseOperations:
         ORDER BY cm.create_time
         """
         results = self.db.execute_query(query, (conversation_id,))
+        print(results)
         db_messages = [Message(**data) for data in results]
+        print("="*10)
+        print(db_messages)
         return self._convert_to_messages_format(db_messages)
 
     def get_message_list(self, conversation_id: str) -> Messages:
@@ -282,18 +285,6 @@ class DatabaseOperations:
         except Exception:
             return False
 
-    def update_tool_call_status(self, call_id: str, status: str, result: Optional[Dict] = None) -> bool:
-        query = """
-        UPDATE tool_calls 
-        SET status = %s, result = %s
-        WHERE call_id = %s
-        """
-        return self.db.execute_update(query, (
-            status,
-            json.dumps(result) if result else None,
-            call_id
-        )) > 0
-
     # MessageToolCall 相关操作
     def link_message_to_tool_call(self, message_tool_call: MessageToolCall) -> bool:
         query = """
@@ -309,15 +300,6 @@ class DatabaseOperations:
             return True
         except Exception:
             return False
-
-    def get_message_tool_calls(self, message_id: str) -> List[ToolCall]:
-        query = """
-        SELECT tc.* FROM tool_calls tc
-        JOIN message_tool_calls mtc ON tc.call_id = mtc.tool_call_id
-        WHERE mtc.message_id = %s
-        """
-        results = self.db.execute_query(query, (message_id,))
-        return [ToolCall(**data) for data in results]
 
     # UserConversation 相关操作
     def link_user_to_conversation(self, user_conversation: UserConversation) -> bool:
@@ -357,7 +339,7 @@ class DatabaseOperations:
     # KnowledgeBaseFile 相关操作
     def create_knowledge_base_file(self, file: KnowledgeBaseFile) -> bool:
         query = """
-        INSERT INTO knowledge_base_file (file_id, knowledge_base_id, file_name, file_path, summary, created_time)
+        INSERT INTO knowledge_base_files (file_id, knowledge_base_id, file_name, file_path, summary, created_time)
         VALUES (%s, %s, %s, %s, %s, %s)
         """
         try:
@@ -371,25 +353,25 @@ class DatabaseOperations:
             return False
 
     def get_knowledge_base_files(self, knowledge_base_id: str) -> List[KnowledgeBaseFile]:
-        query = "SELECT * FROM knowledge_base_file WHERE knowledge_base_id = %s ORDER BY created_time DESC"
+        query = "SELECT * FROM knowledge_base_files WHERE knowledge_base_id = %s ORDER BY created_time DESC"
         results = self.db.execute_query(query, (knowledge_base_id,))
         return [KnowledgeBaseFile(**data) for data in results]
 
     def get_knowledge_base_file(self, file_id: str) -> Optional[KnowledgeBaseFile]:
-        query = "SELECT * FROM knowledge_base_file WHERE file_id = %s"
+        query = "SELECT * FROM knowledge_base_files WHERE file_id = %s"
         result = self.db.execute_query(query, (file_id,))
         if result:
             return KnowledgeBaseFile(**result[0])
         return None
 
     def delete_knowledge_base_file(self, file_id: str) -> bool:
-        query = "DELETE FROM knowledge_base_file WHERE file_id = %s"
+        query = "DELETE FROM knowledge_base_files WHERE file_id = %s"
         return self.db.execute_delete(query, (file_id,)) > 0
 
     # UserKnowledgeBase 相关操作
     def create_user_knowledge_base(self, kb: UserKnowledgeBase) -> bool:
         query = """
-        INSERT INTO user_knowledge_base (kb_id, user_id, title, created_time)
+        INSERT INTO user_knowledge_bases (kb_id, user_id, title, created_time)
         VALUES (%s, %s, %s, %s)
         """
         try:
@@ -402,21 +384,21 @@ class DatabaseOperations:
             return False
 
     def get_user_knowledge_bases(self, user_id: str) -> List[UserKnowledgeBase]:
-        query = "SELECT * FROM user_knowledge_base WHERE user_id = %s ORDER BY created_time DESC"
+        query = "SELECT * FROM user_knowledge_bases WHERE user_id = %s ORDER BY created_time DESC"
         results = self.db.execute_query(query, (user_id,))
         return [UserKnowledgeBase(**data) for data in results]
 
     def get_knowledge_base(self, kb_id: str) -> Optional[UserKnowledgeBase]:
-        query = "SELECT * FROM user_knowledge_base WHERE kb_id = %s"
+        query = "SELECT * FROM user_knowledge_bases WHERE kb_id = %s"
         result = self.db.execute_query(query, (kb_id,))
         if result:
             return UserKnowledgeBase(**result[0])
         return None
 
     def update_knowledge_base_title(self, kb_id: str, title: str) -> bool:
-        query = "UPDATE user_knowledge_base SET title = %s WHERE kb_id = %s"
+        query = "UPDATE user_knowledge_bases SET title = %s WHERE kb_id = %s"
         return self.db.execute_update(query, (title, kb_id)) > 0
 
     def delete_knowledge_base(self, kb_id: str) -> bool:
-        query = "DELETE FROM user_knowledge_base WHERE kb_id = %s"
+        query = "DELETE FROM user_knowledge_bases WHERE kb_id = %s"
         return self.db.execute_delete(query, (kb_id,)) > 0

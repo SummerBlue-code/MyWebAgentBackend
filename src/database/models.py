@@ -55,3 +55,18 @@ class UserKnowledgeBase:
     user_id: str
     title: str
     created_time: datetime
+
+@dataclass
+class ToolCall:
+    call_id: str
+    tool_name: str
+    tool_parameters: Optional[Dict[str, Any]]
+    status: str  # 'success' or 'failed'
+    result: Optional[Dict[str, Any]]
+    create_time: datetime
+
+@dataclass
+class MessageToolCall:
+    message_id: str
+    tool_call_id: str
+    create_time: datetime

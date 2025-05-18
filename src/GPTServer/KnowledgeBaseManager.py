@@ -115,11 +115,10 @@ class KnowledgeBaseManager:
             logger.error(f"更新知识库标题失败: {str(e)}", exc_info=True)
             raise GPTServerError(f"更新知识库标题失败: {str(e)}", ErrorCode.SERVER_INTERNAL_ERROR)
 
-    def update_file_to_knowledge_base(self, knowledge_base_id: str, file: UploadFile) -> Dict[str, Any]:
+    async def update_file_to_knowledge_base(self, knowledge_base_id: str, file: UploadFile) -> Dict[str, Any]:
         """上传文件到知识库
         
         Args:
-            user_id (str): 用户ID
             knowledge_base_id (str): 知识库ID
             file: 文件对象
             
@@ -150,14 +149,14 @@ class KnowledgeBaseManager:
             file_path = os.path.join(save_dir, f"{file_id}{file_ext}")
             
             # 保存文件
+            file_content = await file.read()
             with open(file_path, "wb") as f:
-                file_content = file.file.read()
                 f.write(file_content)
             
             # 生成文件摘要
             summary = self.model.generate_summary(
                 file_content.decode('utf-8', errors='ignore')
-                )
+            )
             
             # 创建文件记录
             file_message = KnowledgeBaseFile(
@@ -206,8 +205,7 @@ class KnowledgeBaseManager:
             raise GPTServerError(f"更新文件到知识库失败: {str(e)}", ErrorCode.SERVER_INTERNAL_ERROR)
         finally:
             # 确保文件被关闭
-            if hasattr(file, 'file'):
-                file.file.close()
+            await file.close()
 
     def get_knowledge_base_files(self, knowledge_base_id: str) -> List[KnowledgeBaseFile]:
         """获取知识库的所有文件
@@ -342,10 +340,11 @@ class KnowledgeBaseManager:
             logger.error(f"删除知识库失败: {str(e)}", exc_info=True)
             raise GPTServerError(f"删除知识库失败: {str(e)}", ErrorCode.SERVER_INTERNAL_ERROR)
 
-    def delete_knowledge_base_file(self,knowledge_base_id:str , file_id: str) -> None:
+    def delete_knowledge_base_file(self, knowledge_base_id: str, file_id: str) -> None:
         """删除知识库文件
         
         Args:
+            knowledge_base_id (str): 知识库ID
             file_id (str): 文件ID
             
         Raises:
@@ -359,6 +358,8 @@ class KnowledgeBaseManager:
             
             # 从数据库中删除文件记录
             success = self.db_ops.delete_knowledge_base_file(file_id)
+            if not success:
+                raise GPTServerError("删除文件记录失败", ErrorCode.SERVER_INTERNAL_ERROR)
 
             # 从向量数据库中删除文件向量
             collection = self.knowledge_base.get_or_create_collection(name=knowledge_base_id)
@@ -366,12 +367,8 @@ class KnowledgeBaseManager:
 
             # 删除上传的文件
             save_dir = os.path.join("uploads", knowledge_base_id)
-            self.safe_delete_file(save_dir,file_id)
-
-            if not success:
-                raise GPTServerError("删除文件记录失败", ErrorCode.SERVER_INTERNAL_ERROR)
-
-
+            if os.path.exists(save_dir):
+                self.safe_delete_file(save_dir, file_id)
 
             logger.info(f"成功删除知识库文件 {file_id}")
             
