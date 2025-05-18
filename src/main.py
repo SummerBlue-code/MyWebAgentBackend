@@ -9,6 +9,7 @@ from src.GPTServer.GPTServer import GPTServer, start_server
 from src.GPTServer.HTTPServer import start_http_server
 from src.MCPServer.Time import run_server as run_time_server
 from src.MCPServer.ExecutePythonCode import run_server as run_python_server
+from src.MCPServer.BoChaServer import run_server as run_bocha_server
 
 # 配置日志
 logging.basicConfig(
@@ -46,6 +47,15 @@ def run_python_server_process():
     except Exception as e:
         logger.error(f"Python代码执行服务器启动失败: {str(e)}")
 
+def run_bocha_server_process():
+    """运行博查服务器"""
+    try:
+        # 这里需要提供 API key，建议从环境变量或配置文件中读取
+        API_KEY = "sk-3a7510a045694c9582b9c69414ce0b19"  # 注意：实际使用时应该从配置文件或环境变量中读取
+        run_bocha_server(API_KEY)
+    except Exception as e:
+        logger.error(f"博查服务器启动失败: {str(e)}")
+
 def main():
     """主函数"""
     # 创建进程列表
@@ -75,6 +85,12 @@ def main():
         python_process.start()
         processes.append(python_process)
         logger.info("Python代码执行服务器启动成功")
+
+        # 启动博查服务器
+        bocha_process = multiprocessing.Process(target=run_bocha_server_process)
+        bocha_process.start()
+        processes.append(bocha_process)
+        logger.info("博查服务器启动成功")
         
         # 等待所有进程
         for process in processes:
