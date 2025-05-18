@@ -284,6 +284,7 @@ class ConversationManager:
         try:
             available_functions = {}
             tools = []
+            print(messages.get_messages())
             if messages.get_messages()[0]["role"] == "system":
                 messages.get_messages()[0]["content"] = self.gpt_server.system_prompts
             if mcp_servers:

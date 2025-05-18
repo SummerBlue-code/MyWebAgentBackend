@@ -15,8 +15,12 @@ import uuid
 import os
 
 from src.models.GPTModel import GPTModel
+from src.config.GPTConfig import GPTConfig
 
 logger = logging.getLogger(__name__)
+
+# 创建配置实例
+config = GPTConfig()
 
 # 创建 FastAPI 应用
 app = FastAPI(
@@ -77,16 +81,16 @@ class KnowledgeBaseFileListResponse(BaseModel):
 knowledge_base_service = KnowledgeBaseManager(
     db_ops=DatabaseOperations(
         Database(
-            "127.0.0.1",
-            3306,
-            "root",
-            "123456",
-            "ai agent"
+            config.db_host,
+            config.db_port,
+            config.db_user,
+            config.db_password,
+            config.db_name
         )
     ),
-    model=GPTModel("https://api.moleapi.com/v1",
-                   "sk-RpraSr9gpvNxiNX7Al68OpmAEKnPqPppiLGX3j3ypgAIjnyf",
-                   EnumModel.gpt_4o_mini
+    model=GPTModel(config.base_url,
+                   config.api_key,
+                   config.model
                    )
 )
 
@@ -315,7 +319,7 @@ async def upload_knowledge_file(
                 }
             )
 
-        result = knowledge_base_service.update_file_to_knowledge_base(kb_id, file)
+        result = await knowledge_base_service.update_file_to_knowledge_base(kb_id, file)
         return result
     except HTTPException:
         raise
@@ -381,8 +385,8 @@ async def delete_knowledge_file(kb_id:str, file_id: str) -> Dict[str, Any]:
 def start_http_server():
     """启动HTTP服务器"""
     import uvicorn
-    logger.info("HTTP服务器启动在 localhost:8080")
-    uvicorn.run(app, host="localhost", port=8080)
+    logger.info(f"HTTP服务器启动在 {config.http_host}:{config.http_port}")
+    uvicorn.run(app, host=config.http_host, port=config.http_port)
 
 if __name__ == "__main__":
     # 配置日志

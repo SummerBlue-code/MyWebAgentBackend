@@ -115,11 +115,10 @@ class KnowledgeBaseManager:
             logger.error(f"更新知识库标题失败: {str(e)}", exc_info=True)
             raise GPTServerError(f"更新知识库标题失败: {str(e)}", ErrorCode.SERVER_INTERNAL_ERROR)
 
-    def update_file_to_knowledge_base(self, knowledge_base_id: str, file: UploadFile) -> Dict[str, Any]:
+    async def update_file_to_knowledge_base(self, knowledge_base_id: str, file: UploadFile) -> Dict[str, Any]:
         """上传文件到知识库
         
         Args:
-            user_id (str): 用户ID
             knowledge_base_id (str): 知识库ID
             file: 文件对象
             
@@ -150,14 +149,14 @@ class KnowledgeBaseManager:
             file_path = os.path.join(save_dir, f"{file_id}{file_ext}")
             
             # 保存文件
+            file_content = await file.read()
             with open(file_path, "wb") as f:
-                file_content = file.file.read()
                 f.write(file_content)
             
             # 生成文件摘要
             summary = self.model.generate_summary(
                 file_content.decode('utf-8', errors='ignore')
-                )
+            )
             
             # 创建文件记录
             file_message = KnowledgeBaseFile(
@@ -206,8 +205,7 @@ class KnowledgeBaseManager:
             raise GPTServerError(f"更新文件到知识库失败: {str(e)}", ErrorCode.SERVER_INTERNAL_ERROR)
         finally:
             # 确保文件被关闭
-            if hasattr(file, 'file'):
-                file.file.close()
+            await file.close()
 
     def get_knowledge_base_files(self, knowledge_base_id: str) -> List[KnowledgeBaseFile]:
         """获取知识库的所有文件
