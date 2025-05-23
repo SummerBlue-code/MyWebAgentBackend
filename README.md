@@ -23,18 +23,29 @@ git clone [项目地址]
 cd AI-Agent
 ```
 
-2. 创建并激活虚拟环境：
+2. 创建虚拟环境：
 ```bash
 python -m venv .venv
-# Windows
+```
+
+3. 激活虚拟环境：
+> Windows
+```bash
 .venv\Scripts\activate
-# Linux/Mac
+```
+> Linux/Mac
+```bash
 source .venv/bin/activate
 ```
 
-3. 安装依赖：
+4. 安装依赖：
 ```bash
 pip install -r requirements.txt
+```
+
+5. 启动项目：
+```bash
+python -m src.main
 ```
 
 ## 配置说明

@@ -1,22 +1,10 @@
 import asyncio
-import json
 import logging
-from typing import Optional, Dict, List, Any, TypedDict
-from collections import defaultdict
-from asyncio import Lock
-from datetime import datetime
-import uuid
 
-import httpx
 import websockets
-from pyexpat.errors import messages
 from websockets import serve, ServerConnection
 
-from src.interface import Messages
-from src.interface.EnumModel import EnumModel
 from src.models.GPTModel import GPTModel
-from src.interface.MCPServers import MCPServers
-from src.interface.WebsocketMessage import WebsocketMessage
 from src.GPTServer.HeartbeatManager import HeartbeatManager
 from src.GPTServer.WebsocketManager import WebsocketManager
 from src.GPTServer.ConversationManager import ConversationManager
