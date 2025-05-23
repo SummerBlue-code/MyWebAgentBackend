@@ -15,7 +15,7 @@
 - Python 3.8+
 - MySQL 数据库
 
-## 安装步骤
+## 安装及启动步骤
 
 1. 克隆项目到本地：
 ```bash
@@ -58,7 +58,7 @@ python -m src.main
      self.db_port = 3306         # 数据库端口
      self.db_user = "root"       # 数据库用户名
      self.db_password = "123456" # 数据库密码
-     self.db_name = "ai agent"   # 数据库名称
+     self.db_name = "test"   # 数据库名称
      ```
 
 2. API 密钥配置：
@@ -146,26 +146,6 @@ python -m src.main
        FOREIGN KEY (message_id) REFERENCES messages(message_id)
    );
 
-   -- 工具调用表
-   CREATE TABLE tool_calls (
-       call_id VARCHAR(36) PRIMARY KEY,
-       tool_name VARCHAR(50) NOT NULL,
-       tool_parameters JSON,
-       status VARCHAR(20) NOT NULL,
-       result JSON,
-       create_time DATETIME NOT NULL
-   );
-
-   -- 消息工具调用关联表
-   CREATE TABLE message_tool_calls (
-       message_id VARCHAR(36),
-       tool_call_id VARCHAR(36),
-       create_time DATETIME NOT NULL,
-       PRIMARY KEY (message_id, tool_call_id),
-       FOREIGN KEY (message_id) REFERENCES messages(message_id),
-       FOREIGN KEY (tool_call_id) REFERENCES tool_calls(call_id)
-   );
-
    -- 用户对话关联表
    CREATE TABLE user_conversations (
        user_id VARCHAR(36),
@@ -175,7 +155,16 @@ python -m src.main
        FOREIGN KEY (user_id) REFERENCES users(user_id),
        FOREIGN KEY (conversation_id) REFERENCES conversations(conversation_id)
    );
-
+   
+   -- 用户知识库表
+   CREATE TABLE user_knowledge_bases (
+       kb_id VARCHAR(36) PRIMARY KEY,
+       user_id VARCHAR(36) NOT NULL,
+       title VARCHAR(255) NOT NULL,
+       created_time DATETIME NOT NULL,
+       FOREIGN KEY (user_id) REFERENCES users(user_id)
+   );
+   
    -- 知识库文件表
    CREATE TABLE knowledge_base_files (
        file_id VARCHAR(36) PRIMARY KEY,
@@ -185,15 +174,6 @@ python -m src.main
        summary TEXT,
        created_time DATETIME NOT NULL,
        FOREIGN KEY (knowledge_base_id) REFERENCES user_knowledge_bases(kb_id)
-   );
-
-   -- 用户知识库表
-   CREATE TABLE user_knowledge_bases (
-       kb_id VARCHAR(36) PRIMARY KEY,
-       user_id VARCHAR(36) NOT NULL,
-       title VARCHAR(255) NOT NULL,
-       created_time DATETIME NOT NULL,
-       FOREIGN KEY (user_id) REFERENCES users(user_id)
    );
    ```
 
@@ -205,15 +185,8 @@ python -m src.main
    - `tool_calls`: 存储工具调用记录
    - `message_tool_calls`: 消息和工具调用的关联表
    - `user_conversations`: 用户和对话的关联表
-   - `knowledge_base_files`: 存储知识库文件信息，与用户知识库表关联
    - `user_knowledge_bases`: 存储用户知识库信息，与用户表关联
-
-## 运行项目
-
-启动所有服务：
-```bash
-python src/main.py
-```
+   - `knowledge_base_files`: 存储知识库文件信息，与用户知识库表关联
 
 ## 项目结构
 
